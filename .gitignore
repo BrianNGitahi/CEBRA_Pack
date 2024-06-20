@@ -3,6 +3,13 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# CO folders
+/metadata/
+/environment/
+/code/
+/data/
+/scratch/
+
 /data/
 
 # C extensions
@@ -162,3 +169,5 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
+
+.vscode

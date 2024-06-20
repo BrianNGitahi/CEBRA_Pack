@@ -164,8 +164,6 @@ def format_data(neural_data, df, trace_times_, choice_times_ , window=None , win
     reward_labels = []
     choice_labels = []
     rpe_labels = []
-    n_licks = []
-
 
     # loop over all trials
     for i in range(0,n_trials):
@@ -200,12 +198,10 @@ def format_data(neural_data, df, trace_times_, choice_times_ , window=None , win
         if df['licks L'].iloc[i] >= df['licks R'].iloc[i]:
             # new trial label
             choice_labels.append(1)
-            n_licks.append(df['licks L'].iloc[i])
 
         elif df['licks R'].iloc[i] > df['licks L'].iloc[i]:
             # new trial label
             choice_labels.append(0)
-            n_licks.append(df['licks R'].iloc[i])
 
         # get the rpe values at each trial
         rpe_labels.append(df['rpe'].iloc[i])
@@ -228,7 +224,7 @@ def format_data(neural_data, df, trace_times_, choice_times_ , window=None , win
     print("rpe labels shape:", rpe_labels.shape)
 
 
-    return nms_HD, reward_labels, choice_labels, n_licks, rpe_labels
+    return nms_HD, reward_labels, choice_labels, rpe_labels
 
 #--------------------------------------------------------------------
 

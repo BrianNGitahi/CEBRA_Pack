@@ -12,6 +12,7 @@
 
 /data/
 
+/Notebooks/data/
 # C extensions
 *.so
 

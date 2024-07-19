@@ -262,7 +262,7 @@ def make_switch_label(choice_label):
 def nm_analysis(data, df_, t_times_, c_times_,labels='reward',window_=None,dimension=3,missing_nm=""):
 
     # format the data into 1s window around the choice and create the labels
-    nms_HD, reward_labels, choice_labels, n_licks, rpe_labels = format_data(data, df_, t_times_,c_times_, window=window_)
+    nms_HD, reward_labels, choice_labels, rpe_labels = format_data(data, df_, t_times_,c_times_, window=window_)
 
     # choose the labels and define label classes (p=rewarded/left n= unrewarded/right)
     if labels=='reward':

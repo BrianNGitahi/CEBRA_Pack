@@ -1,7 +1,7 @@
 """
 This is a library of helper functions for the demo note-books
 """
-
+#%%
 import sys
 
 import os # my addtion
@@ -66,40 +66,38 @@ def view_embedding(embed1, embed2, label, label_class, titles=['time embedding',
 #-------------------------------------------------------------------
 
 # function to build, train and compute an embedding
-def build_train_compute(neural_data, b_label, max_iterations=2000, d=3):
+def build_train_compute(neural_data, b_label, max_iterations=2000, d=3, arch='offset10-model',metric='cosine'):
 
 
     # build time and behaviour models
-    cebra_time_model = CEBRA(model_architecture='offset10-model-mse',
+    cebra_time_model = CEBRA(model_architecture=arch,
                         batch_size=512,
                         learning_rate=3e-4,
                         temperature=1,
                         output_dimension=d,
                         max_iterations=max_iterations,
-                        distance='euclidean',
+                        distance=metric,
                         conditional='time',
                         device='cuda_if_available',
                         verbose=True,
                         time_offsets=10) 
 
-    cebra_behaviour_model = CEBRA(model_architecture='offset10-model-mse',
+    cebra_behaviour_model = CEBRA(model_architecture=arch,
                         batch_size=512,
                         learning_rate=3e-4,
                         temperature=1,
                         output_dimension=d,
                         max_iterations=max_iterations,
-                        distance='euclidean',
+                        distance=metric,
                         conditional='time_delta',
                         device='cuda_if_available',
                         verbose=True,
                         time_offsets=10)
 
-    print("About to begin training")
     # train them both
     cebra_time_model.fit(neural_data)
     cebra_behaviour_model.fit(neural_data, b_label)
 
-    print("About to compute embedding")
     # compute the embeddings
     time_embedding = cebra_time_model.transform(neural_data)
     behaviour_embedding = cebra_behaviour_model.transform(neural_data)
@@ -154,36 +152,6 @@ def view(time_embedding, behaviour_embedding, labels, label_classes, title ="Dif
 
     # then view it at multiple angles
     #view_embedding(time_embedding, behaviour_embedding,s=size,label=labels,label_class=label_classes, titles=['time embedding','behaviour_embedding'], main_title=title)
-
-#--------------------------------------------------------------------
-
-# define function to take the choice labels and make a 'Switch' label
-
-def make_switch_label(choice_label):
-
-    # make sure input is in array form
-    assert type(choice_label)==np.ndarray
-
-    switch_labels = []
-
-    for i in range(0,choice_label.shape[0]):
-
-        # should I just skip this first one?
-        if i==0:
-            switch_labels.append(0)
-            continue
-
-        # make switch label based on previous trial
-        if choice_label[i]!=choice_label[i-1]:
-            switch_labels.append(1)        
-        
-        elif choice_label[i]==choice_label[i-1]:
-            switch_labels.append(0)
-
-    switch_labels = np.array(switch_labels)
-    print('Switch labels shape:', switch_labels.shape)
-
-    return switch_labels
 
 #--------------------------------------------------------------------
 # Make a function to format the NM data into a 1s window around the choice
@@ -272,30 +240,6 @@ def format_data(neural_data, df, trace_times_, choice_times_ , window=None , win
 #--------------------------------------------------------------------
 
 # for each NM combination
-def nm_analysis_(data, df_, t_times_, c_times_,labels='reward',window_=None,dimension=3,missing_nm=""):
-
-    # format the data into 1s window around the choice and create the labels
-    nms_HD, reward_labels, choice_labels, n_licks, rpe_labels = format_data(data, df_, t_times_,c_times_, window=window_)
-
-    if labels=='reward':
-        trial_labels = reward_labels
-
-    if labels=='choice':
-        trial_labels = choice_labels
-
-    # Build and train the model then compute embeddings
-    t_embed, b_embed = build_train_compute(nms_HD,trial_labels,d=dimension)
-
-    # define the label classes
-    rewarded, unrewarded = define_label_classes(trial_labels)
-
-    # view the embeddings
-    view_embedding(t_embed, b_embed, trial_labels,label_class=[rewarded, unrewarded],main_title=missing_nm)
-
-    return nms_HD,t_embed, b_embed, trial_labels, [rewarded,unrewarded]
-#--------------------------------------------------------------------
-
-# for each NM combination
 def nm_analysis(data, df_, t_times_, c_times_,labels='reward',window_=None,dimension=3,missing_nm=""):
 
     # format the data into 1s window around the choice and create the labels
@@ -306,17 +250,14 @@ def nm_analysis(data, df_, t_times_, c_times_,labels='reward',window_=None,dimen
         positive, negative = define_label_classes(reward_labels)
         t_labels = reward_labels
 
-
     if labels=='choice':
         positive, negative = define_label_classes(choice_labels)
         t_labels = choice_labels 
 
-    # use reward labels for rpe
+    # use reward labels to define classes for rpe
     if labels=='rpe':
         positive, negative = define_label_classes(reward_labels)
         t_labels = rpe_labels
-
-    print("defined label classes")
 
     # Build and train the model then compute embeddings
     t_embed, b_embed = build_train_compute(nms_HD, t_labels,d=dimension)
@@ -390,7 +331,7 @@ def nm_analysis_2(data, df, trace_times, choice_times, title, label='reward', wi
         # collect the labels and label classes for use in the plotting
         # note that we assume they're the same for all datasets
 
-        print("COMPLETED ANALYSIS OF NM {}".format(i))
+        print("COMPLETED ANALYSIS OF NM {}: ".format(i))
 
     # plot them
     #plot4_embeddings(behaviour_embeddings,labels=t_labels,l_class=[rewarded,unrewarded],titles=title)
@@ -522,12 +463,12 @@ logging.basicConfig(
 
 
 # analyse one session and generate a dataframe with the stats
-def sess_analysis(df_trials_ses):
+def sess_analysis(df_trials_sess, label_='reward'):
 
     try:
-        df_trials_ses['region'] = 'NAc'
+        df_trials_sess['region'] = 'NAc'
         # df_trials_ses, events2plot, traces2plot, trace_times2plot = compute_sessionwide_traces(df_trials_ses)
-        df_trials_ses, events, traces, trace_times = compute_sessionwide_traces_multi(df_trials_ses)
+        df_trials_ses, events, traces, trace_times = compute_sessionwide_traces_multi(df_trials_sess)
 
         # if the session doesn't have all 4 NMs then skip that session
         if len(traces) != 4:
@@ -573,80 +514,80 @@ def sess_analysis(df_trials_ses):
 
         # 3. GET AUC SCORES: individual and all together + before and after choice
         #----------------------------------------------------------------------------------------------------
-        print("About to start Session Analysis")
 
         # Individual NMs AUC scores
         ind_nm_data =  individual_datasets(traces_=traces)
-        b_embeds, t_embeds, labels, [rewarded, unrewarded] =  nm_analysis_2(ind_nm_data, df=df_trials_ses,trace_times=trace_times, choice_times=choice_times, title='Individual NMs')
-        auc_scores, sds =   get_auc(b_embeds, labels)
-        print("completed ind NMS aucs")
+        b_embeds, t_embeds, labels, [rewarded, unrewarded] =  nm_analysis_2(ind_nm_data, df=df_trials_ses,trace_times=trace_times, choice_times=choice_times, label=label_, title='Individual NMs')
+        
+        if label_ == 'rpe':
+            r2_scores, sds = get_r2(b_embeds, labels)
+            print("completed ind NMs r2s")
+        else:
+            auc_scores, sds =   get_auc(b_embeds, labels)
+            print("completed ind NMS aucs")
 
 
         # AUC Score for all of them
-        ball_embeds, tall_embeds, labels_all, [rewardeda, unrewardeda] =  nm_analysis_2([all_nms], df=df_trials_ses,trace_times=trace_times, choice_times=choice_times, title='ALL NMs')
-        auca_scores, sds_a =  get_auc(ball_embeds, labels_all)
-        print("completed all NMS aucs")
+        ball_embeds, tall_embeds, labels_all, [rewardeda, unrewardeda] =  nm_analysis_2([all_nms], df=df_trials_ses,trace_times=trace_times, choice_times=choice_times, label=label_, title='ALL NMs')
 
+        if label_ =='rpe':
+            r2a_scores, sds_a = get_r2(ball_embeds, labels_all)
+            print("completed all NMS r2s")
+        else:
+            auca_scores, sds_a =  get_auc(ball_embeds, labels_all)
+            print("completed all NMS aucs")
 
+    
         # Before and after choice AUC scores + (bonus) best two embedding pairs 
-        b4b_embeds, b4t_embeds, labels_b4, [r, unr] =  nm_analysis_2([all_nms],window='before', df=df_trials_ses,trace_times=trace_times, choice_times=choice_times, title='ALL NMs')
-        afb_embeds, aft_embeds, labels_af, [r_af, unr_af] =  nm_analysis_2([all_nms], window='after', df=df_trials_ses,trace_times=trace_times, choice_times=choice_times, title='ALL NMs')
+        b4b_embeds, b4t_embeds, labels_b4, [r, unr] =  nm_analysis_2([all_nms],window='before', df=df_trials_ses,trace_times=trace_times, choice_times=choice_times, label=label_, title='ALL NMs')
+        afb_embeds, aft_embeds, labels_af, [r_af, unr_af] =  nm_analysis_2([all_nms], window='after', df=df_trials_ses,trace_times=trace_times, choice_times=choice_times, label=label_, title='ALL NMs')
 
-        auc_b4_scores, sds_b4 =  get_auc(b4b_embeds, labels_b4)
-        auc_af_scores, sds_af =  get_auc(afb_embeds, labels_af)
-        print("completed b4/af aucs")
-
+        if label_=='rpe':
+            r2_b4_scores, sds_b4 = get_r2(b4b_embeds, labels_b4)
+            r2_af_scores, sds_af = get_r2(afb_embeds, labels_af)
+            print("completed b4/af r2s")
+        else:
+            auc_b4_scores, sds_b4 =  get_auc(b4b_embeds, labels_b4)
+            auc_af_scores, sds_af =  get_auc(afb_embeds, labels_af)
+            print("completed b4/af aucs")
 
         # Signal Average in the 1 sec window (BONUS: add later)
 
-        # add new row with session details to the DF
-        new_row = {
-            "subject_ID":subject_ID, 
-            "ses_idx": session_index, 
-            "all4_AUC": auca_scores[0], 
-            "DA_AUC": auc_scores[0], 
-            "NE_AUC":auc_scores[1], 
-            "5HT_AUC":auc_scores[2], 
-            "ACh_AUC": auc_scores[3], 
-            "b4_AUC": auc_b4_scores[0], 
-            "af_AUC": auc_af_scores[0]
+        if label_ == 'rpe':
+            # add new row with session details to the DF
+            new_row = {
+                "subject_ID":subject_ID, 
+                "ses_idx": session_index, 
+                f"all4_R2_{label_}":r2a_scores[0], 
+                f"DA_R2_{label_}":r2_scores[0], 
+                f"NE_R2_{label_}":r2_scores[1], 
+                f"5HT_R2_{label_}":r2_scores[2], 
+                f"ACh_R2_{label_}": r2_scores[3], 
+                f"b4_R2_{label_}": r2_b4_scores[0], 
+                f"af_R2_{label_}": r2_af_scores[0]
             }
 
+        else:
+            # add new row with session details to the DF
+            new_row = {
+                "subject_ID":subject_ID, 
+                "ses_idx": session_index, 
+                f"all4_AUC_{label_}": auca_scores[0], 
+                f"DA_AUC_{label_}": auc_scores[0], 
+                f"NE_AUC_{label_}":auc_scores[1], 
+                f"5HT_AUC_{label_}":auc_scores[2], 
+                f"ACh_AUC_{label_}": auc_scores[3], 
+                f"b4_AUC_{label_}": auc_b4_scores[0], 
+                f"af_AUC_{label_}": auc_af_scores[0]
+                }
 
-        print("COMPLETED ANALYSIS OF SESSION: {}".format(session_index))
+
+        print("COMPLETED ANALYSIS OF SESSION: {}, label used: {}".format(session_index, label_))
         return new_row
 
     except Exception as e:
         logging.error(f"Error occurred in session {df_trials_ses['ses_idx'].iloc[0]}", exc_info=True)
         return None
-
-#-------------------------------------------------------------------------------------------------------
-
-# gets number of cpus available
-def get_code_ocean_cpu_limit():
-    """
-    Gets the Code Ocean capsule CPU limit
-
-    Returns
-    -------
-    int:
-        number of cores available for compute
-    """
-    # Checks for environmental variables
-    co_cpus = os.environ.get("CO_CPUS")
-    aws_batch_job_id = os.environ.get("AWS_BATCH_JOB_ID")
-
-    if co_cpus:
-        return co_cpus
-    if aws_batch_job_id:
-        return 1
-    with open("/sys/fs/cgroup/cpu/cpu.cfs_quota_us") as fp:
-        cfs_quota_us = int(fp.read())
-    with open("/sys/fs/cgroup/cpu/cpu.cfs_period_us") as fp:
-        cfs_period_us = int(fp.read())
-    container_cpus = cfs_quota_us // cfs_period_us
-    # For physical machine, the `cfs_quota_us` could be '-1'
-    return psutil.cpu_count(logical=False) if container_cpus < 1 else container_cpus
 
 
 #------------------------------------------------------------------------------------------------------
@@ -662,30 +603,61 @@ def reconstruction_score(x, y):
     return _linear_fitting(x, y)
 
 #------------------------------------------------------------------------------------------------------
+# get the r2 score for a set of embeddings
+def get_r2(set_of_embeddings, labels, n_iterations=1):
+
+    # list to store mean auc scores at each of these embedding dimensions
+    mean_scores = []
+    errors = []
+
+    for embedding in set_of_embeddings:
+
+        scores=[]
+
+        for i in range(n_iterations):
+            
+            # get score
+            r2_score, prediction = reconstruction_score(embedding, labels)
+            scores.append(r2_score)
+
+        # append score
+        mean_scores.append(np.mean(scores))
+        errors.append(np.std(scores))
+
+
+    return np.array(mean_scores), np.array(errors)
+
+#------------------------------------------------------------------------------------------------------
 
 # Function to analyze a list of sessions
-def analyze_sessions(sessions):
+def analyze_sessions(sessions, behaviour_label='reward'):
 
-    # define input and output dataframes
-    session_stats_df = pd.DataFrame(columns=["subject_ID", "ses_idx", "all4_AUC", "DA_AUC", "NE_AUC", "5HT_AUC", "ACh_AUC", "b4_AUC", "af_AUC"])
+    # Define the list of valid behaviour labels -- can add more later
+    valid_behaviour_labels = ['reward', 'choice', 'rpe']
+    
+    # Check if the provided behaviour_label is in the list of valid labels
+    if behaviour_label not in valid_behaviour_labels:
+        raise ValueError(f"Invalid behaviour_label: {behaviour_label}. Must be one of {valid_behaviour_labels}.")
+
+    # define dataframe
+    if behaviour_label == 'rpe':
+        session_stats_df = pd.DataFrame(columns=["subject_ID", "ses_idx", f"all4_R2_{behaviour_label}", f"DA_R2_{behaviour_label}", f"NE_R2_{behaviour_label}", f"5HT_R2_{behaviour_label}", f"ACh_R2_{behaviour_label}", f"b4_R2_{behaviour_label}", f"af_R2_{behaviour_label}"])
+    else:
+        session_stats_df = pd.DataFrame(columns=["subject_ID", "ses_idx", f"all4_AUC_{behaviour_label}", f"DA_AUC_{behaviour_label}", f"NE_AUC_{behaviour_label}", f"5HT_AUC_{behaviour_label}", f"ACh_AUC_{behaviour_label}", f"b4_AUC_{behaviour_label}", f"af_AUC_{behaviour_label}"])
 
     # analyse the sessions
-    for session in sessions:
-        try:
-            session_df = pd.read_pickle(session)
+    for i, session in enumerate(sessions):
 
-            # make sure there's only one session's data in the input df then get the session index
-            assert(np.unique(session_df['ses_idx'].values).shape[0]==1)
+        session_df = pd.read_pickle(session)
 
-            session_stats = sess_analysis(session_df)
+        # make sure there's only one session's data in the input df then get the session index
+        assert(np.unique(session_df['ses_idx'].values).shape[0]==1)
 
-            if session_stats:
-                session_stats_df.loc[len(session_stats_df)] = session_stats
+        session_stats = sess_analysis(session_df, behaviour_label)
 
-        except Exception as e:
-            print(f"Error processing session {session}: {e}")
-            continue
-        
+        if session_stats:
+            session_stats_df.loc[len(session_stats_df)] = session_stats
+
     return session_stats_df
 
 #------------------------------------------------------------------------------------------------------
@@ -696,3 +668,4 @@ def define_resultsDir(folder='session_stats', save_dir = '../results'):
     os.makedirs(results_folder, exist_ok=True)
     return results_folder
 #------------------------------------------------------------------------------------------------------
+# %%

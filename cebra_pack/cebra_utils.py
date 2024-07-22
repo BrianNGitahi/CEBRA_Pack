@@ -29,7 +29,7 @@ from sklearn.metrics import auc
 from matplotlib.collections import LineCollection
 import sklearn.linear_model
 
-from utils import compute_sessionwide_traces_multi
+import cebra_pack.utils as cpu
 
 
 #--------------------------------------------------------------------
@@ -468,7 +468,7 @@ def sess_analysis(df_trials_sess, label_='reward'):
     try:
         df_trials_sess['region'] = 'NAc'
         # df_trials_ses, events2plot, traces2plot, trace_times2plot = compute_sessionwide_traces(df_trials_ses)
-        df_trials_ses, events, traces, trace_times = compute_sessionwide_traces_multi(df_trials_sess)
+        df_trials_ses, events, traces, trace_times = cpu.compute_sessionwide_traces_multi(df_trials_sess)
 
         # if the session doesn't have all 4 NMs then skip that session
         if len(traces) != 4:

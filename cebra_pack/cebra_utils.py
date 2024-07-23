@@ -253,7 +253,7 @@ def format_data(neural_data, df, trace_times_, choice_times_ , window=None , win
 #--------------------------------------------------------------------
 
 # for each NM combination
-def nm_analysis(data, df_, t_times_, c_times_,labels='reward',other_label_=None, window_=None,dimension=3,missing_nm=""):
+def nm_analysis(data, df_, t_times_, c_times_,arch_ ='offset10-model', metric_ ='cosine',labels='reward',other_label_=None, window_=None,dimension=3,missing_nm=""):
 
     # Define the list of valid behaviour labels
     valid_behaviour_labels = ['reward', 'choice', 'rpe']
@@ -286,7 +286,7 @@ def nm_analysis(data, df_, t_times_, c_times_,labels='reward',other_label_=None,
 
 
     # Build and train the model then compute embeddings
-    t_embed, b_embed = build_train_compute(nms_HD, t_labels,d=dimension)
+    t_embed, b_embed = build_train_compute(nms_HD, t_labels,d=dimension, arch=arch_, metric=metric_)
 
     # view the embeddings
     #view_embedding(t_embed, b_embed, t_labels,label_class=[rewarded, unrewarded],title=missing_nm)
@@ -340,7 +340,7 @@ def plot4_embeddings(embeddings, labels , l_class, titles=['DA only', 'NE only',
 #--------------------------------------------------------------------
 
 # run nm analysis on mutliple nm datasets 
-def nm_analysis_2(data, df, trace_times, choice_times, title, label='reward', other_label = None, window=None):
+def nm_analysis_2(data, df, trace_times, choice_times, title,arch='offset10-model', metric ='cosine', label='reward', other_label = None, window=None):
 
     # collect embeddings, and the labels in lists
     behaviour_embeddings = []
@@ -349,7 +349,7 @@ def nm_analysis_2(data, df, trace_times, choice_times, title, label='reward', ot
     # run the nm analysis on the individual nms
     for i, dataset in enumerate(data):
 
-        t_embed, b_embed, t_labels, [positive,negative] = nm_analysis(dataset, df, trace_times, choice_times,labels=label, other_label_=other_label, window_=window)
+        t_embed, b_embed, t_labels, [positive,negative] = nm_analysis(dataset, df, trace_times, choice_times,arch_ = arch, metric_ = metric, labels=label, other_label_=other_label, window_=window)
 
         behaviour_embeddings.append(b_embed)
         time_embedings.append(t_embed)

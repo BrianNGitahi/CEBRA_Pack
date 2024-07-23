@@ -121,38 +121,51 @@ def define_label_classes(trial_labels):
 
 #--------------------------------------------------------------------
 
-def view(time_embedding, behaviour_embedding, labels, label_classes, title ="Different Angles", size=0.8):
+# define a function to view the embeddings
+def view(time_embedding, behaviour_embedding, labels, label_classes, scores=None, titles=["Time embedding", "Behaviour embedding"], size=5):
  
     # create a figure and make the plots
-    fig = plt.figure(figsize=(14,8))
+    fig = plt.figure(figsize=(17,8))
     gs = gridspec.GridSpec(1, 2, figure=fig)
 
 
     ax81 = fig.add_subplot(gs[0,0], projection='3d')
     ax82 = fig.add_subplot(gs[0,1], projection='3d')
-    ax81.axis('off')
-    ax82.axis('off')
+    
+    for ax in [ax81,ax82]:
+        ax.set_xlabel("latent 1", labelpad=0.001, fontsize=13)
+        ax.set_ylabel("latent 2", labelpad=0.001, fontsize=13)
+        ax.set_zlabel("latent 3", labelpad=0.001, fontsize=13)
+
+        # Hide X and Y axes label marks
+        ax.xaxis.set_tick_params(labelbottom=False)
+        ax.yaxis.set_tick_params(labelleft=False)
+        ax.zaxis.set_tick_params(labelright=False)
+
+        # Hide X and Y axes tick marks
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_zticks([])
 
 
     # colour maps
     colours = ['cool', 'plasma', 'spring']
 
+    embeddings = [time_embedding, behaviour_embedding]
+
+    if scores == None:
+        scores, errors = np.round(get_auc(embeddings, labels),3)
+
     # plot the time embedding 
-    cebra.plot_embedding(embedding=time_embedding[label_classes[0],:], embedding_labels=labels[label_classes[0]],ax=ax81, markersize=0.7, title='Time embedding', cmap=colours[0])
-    cebra.plot_embedding(embedding=time_embedding[label_classes[1],:], embedding_labels=labels[label_classes[1]],ax=ax81, markersize=0.7, title='Time embedding', cmap=colours[1])
+    cebra.plot_embedding(embedding=time_embedding[label_classes[0],:], embedding_labels=labels[label_classes[0]],ax=ax81, markersize=size, title=titles[0], cmap=colours[0])
+    cebra.plot_embedding(embedding=time_embedding[label_classes[1],:], embedding_labels=labels[label_classes[1]],ax=ax81, markersize=size, title= f'{titles[0]}, Score:{scores[0]}', cmap=colours[1])
 
 
     # plot the behaviour embedding 
-    cebra.plot_embedding(embedding=behaviour_embedding[label_classes[0],:], embedding_labels=labels[label_classes[0]],ax=ax82, markersize=0.7, title='Behaviour embedding', cmap=colours[0],)
-    cebra.plot_embedding(embedding=behaviour_embedding[label_classes[1],:], embedding_labels=labels[label_classes[1]],ax=ax82,markersize=0.7, title='Behaviour embedding',  cmap=colours[1])
+    cebra.plot_embedding(embedding=behaviour_embedding[label_classes[0],:], embedding_labels=labels[label_classes[0]],ax=ax82, markersize=size, title=titles[1], cmap=colours[0],)
+    cebra.plot_embedding(embedding=behaviour_embedding[label_classes[1],:], embedding_labels=labels[label_classes[1]],ax=ax82,markersize=size, title= f'{titles[1]}, Score: {scores[1]}',  cmap=colours[1])
 
     gs.tight_layout(figure=fig)
-
-    #print("preparing figure at multiple angles")
-
-    # then view it at multiple angles
-    #view_embedding(time_embedding, behaviour_embedding,s=size,label=labels,label_class=label_classes, titles=['time embedding','behaviour_embedding'], main_title=title)
-
 #--------------------------------------------------------------------
 # Make a function to format the NM data into a 1s window around the choice
 
@@ -240,24 +253,37 @@ def format_data(neural_data, df, trace_times_, choice_times_ , window=None , win
 #--------------------------------------------------------------------
 
 # for each NM combination
-def nm_analysis(data, df_, t_times_, c_times_,labels='reward',window_=None,dimension=3,missing_nm=""):
+def nm_analysis(data, df_, t_times_, c_times_,labels='reward',other_label_=None, window_=None,dimension=3,missing_nm=""):
+
+    # Define the list of valid behaviour labels
+    valid_behaviour_labels = ['reward', 'choice', 'rpe']
+    
+    # Use assert to check if the provided behaviour_label is in the list of valid labels
+    assert labels in valid_behaviour_labels, f"Invalid behaviour_label: {labels}. Must be one of {valid_behaviour_labels}."
+
 
     # format the data into 1s window around the choice and create the labels
     nms_HD, reward_labels, choice_labels, n_licks, rpe_labels = format_data(data, df_, t_times_,c_times_, window=window_)
+
 
     # choose the labels and define label classes (p=rewarded/left n= unrewarded/right)
     if labels=='reward':
         positive, negative = define_label_classes(reward_labels)
         t_labels = reward_labels
 
-    if labels=='choice':
+    elif labels=='choice':
         positive, negative = define_label_classes(choice_labels)
         t_labels = choice_labels 
 
     # use reward labels to define classes for rpe
-    if labels=='rpe':
+    elif labels=='rpe':
         positive, negative = define_label_classes(reward_labels)
         t_labels = rpe_labels
+
+    # if another label was provided, use that one instead    
+    if other_label_ is not None:
+        t_labels = other_label_
+
 
     # Build and train the model then compute embeddings
     t_embed, b_embed = build_train_compute(nms_HD, t_labels,d=dimension)
@@ -314,7 +340,7 @@ def plot4_embeddings(embeddings, labels , l_class, titles=['DA only', 'NE only',
 #--------------------------------------------------------------------
 
 # run nm analysis on mutliple nm datasets 
-def nm_analysis_2(data, df, trace_times, choice_times, title, label='reward', window=None):
+def nm_analysis_2(data, df, trace_times, choice_times, title, label='reward', other_label = None, window=None):
 
     # collect embeddings, and the labels in lists
     behaviour_embeddings = []
@@ -323,7 +349,7 @@ def nm_analysis_2(data, df, trace_times, choice_times, title, label='reward', wi
     # run the nm analysis on the individual nms
     for i, dataset in enumerate(data):
 
-        t_embed, b_embed, t_labels, [positive,negative] = nm_analysis(dataset, df, trace_times, choice_times,labels=label, window_=window)
+        t_embed, b_embed, t_labels, [positive,negative] = nm_analysis(dataset, df, trace_times, choice_times,labels=label, other_label_=other_label, window_=window)
 
         behaviour_embeddings.append(b_embed)
         time_embedings.append(t_embed)

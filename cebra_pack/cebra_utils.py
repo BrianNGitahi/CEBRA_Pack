@@ -122,7 +122,7 @@ def define_label_classes(trial_labels):
 #--------------------------------------------------------------------
 
 # define a function to view the embeddings
-def view(time_embedding, behaviour_embedding, labels, label_classes, scores=None, titles=["Time embedding", "Behaviour embedding"], size=5):
+def view(time_embedding, behaviour_embedding, labels, label_classes, scores=None, titles=["Time embedding", "Behaviour embedding"],main_title="Reward Label Embeddings", size=5):
  
     # create a figure and make the plots
     fig = plt.figure(figsize=(17,8))
@@ -165,7 +165,9 @@ def view(time_embedding, behaviour_embedding, labels, label_classes, scores=None
     cebra.plot_embedding(embedding=behaviour_embedding[label_classes[0],:], embedding_labels=labels[label_classes[0]],ax=ax82, markersize=size, title=titles[1], cmap=colours[0],)
     cebra.plot_embedding(embedding=behaviour_embedding[label_classes[1],:], embedding_labels=labels[label_classes[1]],ax=ax82,markersize=size, title= f'{titles[1]}, Score: {scores[1]}',  cmap=colours[1])
 
+    plt.suptitle(main_title)
     gs.tight_layout(figure=fig)
+
 #--------------------------------------------------------------------
 # Make a function to format the NM data into a 1s window around the choice
 

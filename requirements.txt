@@ -12,7 +12,7 @@ beautifulsoup4==4.13.0b2
 bleach==6.1.0
 Bottleneck @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_2bxpizxa3c/croot/bottleneck_1707864819812/work
 Brotli @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_27zk0eqdh0/croot/brotli-split_1714483157007/work
-cebra==0.4.0
+cebra==0.2.0
 certifi @ file:///home/conda/feedstock_root/build_artifacts/certifi_1718025014955/work/certifi
 cffi==1.17.0rc1
 charset-normalizer @ file:///tmp/build/80754af9/charset-normalizer_1630003229654/work
@@ -84,7 +84,7 @@ numpy @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_a51i
 openpyxl==3.1.5
 overrides==7.7.0
 packaging @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_a6lqg7at4g/croot/packaging_1710807410750/work
-pandas==1.3.4
+pandas==2.0.0
 pandocfilters==1.5.1
 parso @ file:///home/conda/feedstock_root/build_artifacts/parso_1712320355065/work
 pexpect @ file:///home/conda/feedstock_root/build_artifacts/pexpect_1706113125309/work

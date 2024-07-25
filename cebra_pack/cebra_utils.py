@@ -155,18 +155,26 @@ def view(time_embedding, behaviour_embedding, labels, label_classes, scores=None
 
     if scores == None:
         scores, errors = np.round(get_auc(embeddings, labels),3)
+
+        # plot the time embedding 
+        cebra.plot_embedding(embedding=time_embedding[label_classes[0],:], embedding_labels=labels[label_classes[0]],ax=ax81, markersize=size, title=titles[0], cmap=colours[0])
+        cebra.plot_embedding(embedding=time_embedding[label_classes[1],:], embedding_labels=labels[label_classes[1]],ax=ax81, markersize=size, title= f'{titles[0]}, Score:{scores[0]}', cmap=colours[1])
+
+
+        # plot the behaviour embedding 
+        cebra.plot_embedding(embedding=behaviour_embedding[label_classes[0],:], embedding_labels=labels[label_classes[0]],ax=ax82, markersize=size, title=titles[1], cmap=colours[0],)
+        cebra.plot_embedding(embedding=behaviour_embedding[label_classes[1],:], embedding_labels=labels[label_classes[1]],ax=ax82,markersize=size, title= f'{titles[1]}, Score: {scores[1]}',  cmap=colours[1])
     
     elif scores == 'r2':
         scores, errors = np.round(get_r2(embeddings, labels),3)
 
-    # plot the time embedding 
-    cebra.plot_embedding(embedding=time_embedding[label_classes[0],:], embedding_labels=labels[label_classes[0]],ax=ax81, markersize=size, title=titles[0], cmap=colours[0])
-    cebra.plot_embedding(embedding=time_embedding[label_classes[1],:], embedding_labels=labels[label_classes[1]],ax=ax81, markersize=size, title= f'{titles[0]}, Score:{scores[0]}', cmap=colours[1])
+        # plot the time embedding 
+        cebra.plot_embedding(embedding=time_embedding, embedding_labels=labels,ax=ax81, markersize=5, title= f'{titles[0]}, Score:{scores[0]}', cmap=colours[1])
+
+        # plot the behaviour embedding 
+        cebra.plot_embedding(embedding=behaviour_embedding, embedding_labels=labels,ax=ax82,markersize=5, title= f'{titles[1]}, Score: {scores[1]}',  cmap=colours[1])
 
 
-    # plot the behaviour embedding 
-    cebra.plot_embedding(embedding=behaviour_embedding[label_classes[0],:], embedding_labels=labels[label_classes[0]],ax=ax82, markersize=size, title=titles[1], cmap=colours[0],)
-    cebra.plot_embedding(embedding=behaviour_embedding[label_classes[1],:], embedding_labels=labels[label_classes[1]],ax=ax82,markersize=size, title= f'{titles[1]}, Score: {scores[1]}',  cmap=colours[1])
 
     plt.suptitle(main_title)
     gs.tight_layout(figure=fig)

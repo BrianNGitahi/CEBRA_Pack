@@ -1,5 +1,5 @@
 """
-This is a library of helper functions for the demo note-books
+This is a library of helper functions for the demo notebooks
 """
 #%%
 import sys
@@ -33,78 +33,49 @@ import cebra_pack.utils as cpu
 
 
 #--------------------------------------------------------------------
-# function to view the ideal embedding from different angles
-def view_embedding(embed1, embed2, label, label_class, titles=['time embedding','behaviour_embedding'], main_title="Different Angles", s=0.8, n_angles=2):
+# function to make datasets of combinations of 3 NMs
+# format the arrays
+def create_datasets(traces_):
 
-    fig1=plt.figure(figsize=(8,4*n_angles))
-    gs = gridspec.GridSpec(n_angles, 2, figure=fig1)
+    # create a list to hold the different combinations of NM data
+    datasets = []
 
-    c = ['cool','plasma','pink','winter']
+    # iterate through the keys in the dictionary holding the NM data
+    for key in traces_:
 
-    for i, ii in enumerate(range(60,360,int(300/n_angles))):
+        # at each iteration make an array of NM data and exclude the current NM from the array
+        array = np.array([traces_[trace] for trace in traces_.keys() if trace !=key ])
 
-        # create the axes
-        ax1 = fig1.add_subplot(gs[1*i,0], projection='3d')
-        ax1.view_init(elev=10., azim=ii) 
-
-        ax2 = fig1.add_subplot(gs[1*i,1], projection='3d')
-        ax2.view_init(elev=10., azim=ii)
-
-        # loop over the number of labels
-        for j,value in enumerate(label_class):
-            
-            # plot time embedding
-            cebra.plot_embedding(embedding=embed1[value,:], embedding_labels=label[value], ax=ax1, markersize=s,title=titles[0],cmap=c[j])
-
-            # plot behaviour embedding
-            cebra.plot_embedding(embedding=embed2[value,:], embedding_labels=label[value], ax=ax2, markersize=s,title=titles[1],cmap=c[j])
-
-            plt.tight_layout()
-
-        plt.suptitle(main_title)
-
-#-------------------------------------------------------------------
-
-# function to build, train and compute an embedding
-def build_train_compute(neural_data, b_label, max_iterations=2000, d=3, arch='offset10-model',metric='cosine'):
+        # format the array 
+        f_array = np.transpose(array)
+        f_array = f_array.astype(np.float64)
+        print("shape of formatted array:", f_array.shape)
+        datasets.append(f_array)
 
 
-    # build time and behaviour models
-    cebra_time_model = CEBRA(model_architecture=arch,
-                        batch_size=512,
-                        learning_rate=3e-4,
-                        temperature=1,
-                        output_dimension=d,
-                        max_iterations=max_iterations,
-                        distance=metric,
-                        conditional='time',
-                        device='cuda_if_available',
-                        verbose=True,
-                        time_offsets=10) 
+    return datasets
 
-    cebra_behaviour_model = CEBRA(model_architecture=arch,
-                        batch_size=512,
-                        learning_rate=3e-4,
-                        temperature=1,
-                        output_dimension=d,
-                        max_iterations=max_iterations,
-                        distance=metric,
-                        conditional='time_delta',
-                        device='cuda_if_available',
-                        verbose=True,
-                        time_offsets=10)
+#--------------------------------------------------------------------
 
-    # train them both
-    cebra_time_model.fit(neural_data)
-    cebra_behaviour_model.fit(neural_data, b_label)
+# get the data as individual datasets of each nm
+def individual_datasets(traces_):
 
-    # compute the embeddings
-    time_embedding = cebra_time_model.transform(neural_data)
-    behaviour_embedding = cebra_behaviour_model.transform(neural_data)
+    # create a list to hold the different NMs data
+    datasets = []
 
-    # return the embeddings 
+    # loop through the traces
+    for trace in traces_.keys():
 
-    return time_embedding, behaviour_embedding
+        # select the trace of the current NM
+        array = np.array([traces_[trace]])
+
+        # format the array 
+        f_array = np.transpose(array)
+        f_array = f_array.astype(np.float64)
+        print("shape of formatted array:", f_array.shape)
+        datasets.append(f_array)
+
+    return datasets
 
 #--------------------------------------------------------------------
 
@@ -121,65 +92,6 @@ def define_label_classes(trial_labels):
 
 #--------------------------------------------------------------------
 
-# define a function to view the embeddings
-def view(time_embedding, behaviour_embedding, labels, label_classes, scores=None, titles=["Time embedding", "Behaviour embedding"],main_title="Reward Label Embeddings", size=5):
- 
-    # create a figure and make the plots
-    fig = plt.figure(figsize=(17,8))
-    gs = gridspec.GridSpec(1, 2, figure=fig)
-
-
-    ax81 = fig.add_subplot(gs[0,0], projection='3d')
-    ax82 = fig.add_subplot(gs[0,1], projection='3d')
-    
-    for ax in [ax81,ax82]:
-        ax.set_xlabel("latent 1", labelpad=0.001, fontsize=13)
-        ax.set_ylabel("latent 2", labelpad=0.001, fontsize=13)
-        ax.set_zlabel("latent 3", labelpad=0.001, fontsize=13)
-
-        # Hide X and Y axes label marks
-        ax.xaxis.set_tick_params(labelbottom=False)
-        ax.yaxis.set_tick_params(labelleft=False)
-        ax.zaxis.set_tick_params(labelright=False)
-
-        # Hide X and Y axes tick marks
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.set_zticks([])
-
-
-    # colour maps
-    colours = ['cool', 'plasma', 'spring']
-
-    embeddings = [time_embedding, behaviour_embedding]
-
-    if scores == None:
-        scores, errors = np.round(get_auc(embeddings, labels),3)
-
-        # plot the time embedding 
-        cebra.plot_embedding(embedding=time_embedding[label_classes[0],:], embedding_labels=labels[label_classes[0]],ax=ax81, markersize=size, title=titles[0], cmap=colours[0])
-        cebra.plot_embedding(embedding=time_embedding[label_classes[1],:], embedding_labels=labels[label_classes[1]],ax=ax81, markersize=size, title= f'{titles[0]}, Score:{scores[0]}', cmap=colours[1])
-
-
-        # plot the behaviour embedding 
-        cebra.plot_embedding(embedding=behaviour_embedding[label_classes[0],:], embedding_labels=labels[label_classes[0]],ax=ax82, markersize=size, title=titles[1], cmap=colours[0],)
-        cebra.plot_embedding(embedding=behaviour_embedding[label_classes[1],:], embedding_labels=labels[label_classes[1]],ax=ax82,markersize=size, title= f'{titles[1]}, Score: {scores[1]}',  cmap=colours[1])
-    
-    elif scores == 'r2':
-        scores, errors = np.round(get_r2(embeddings, labels),3)
-
-        # plot the time embedding 
-        cebra.plot_embedding(embedding=time_embedding, embedding_labels=labels,ax=ax81, markersize=5, title= f'{titles[0]}, Score:{scores[0]}', cmap=colours[1])
-
-        # plot the behaviour embedding 
-        cebra.plot_embedding(embedding=behaviour_embedding, embedding_labels=labels,ax=ax82,markersize=5, title= f'{titles[1]}, Score: {scores[1]}',  cmap=colours[1])
-
-
-
-    plt.suptitle(main_title)
-    gs.tight_layout(figure=fig)
-
-#--------------------------------------------------------------------
 # Make a function to format the NM data into a 1s window around the choice
 
 def format_data(neural_data, df, trace_times_, choice_times_ , window=None , window_size=10):
@@ -265,6 +177,49 @@ def format_data(neural_data, df, trace_times_, choice_times_ , window=None , win
 
 #--------------------------------------------------------------------
 
+# function to build, train and compute an embedding
+def build_train_compute(neural_data, b_label, max_iterations=2000, d=3, arch='offset10-model',metric='cosine'):
+
+
+    # build time and behaviour models
+    cebra_time_model = CEBRA(model_architecture=arch,
+                        batch_size=512,
+                        learning_rate=3e-4,
+                        temperature=1,
+                        output_dimension=d,
+                        max_iterations=max_iterations,
+                        distance=metric,
+                        conditional='time',
+                        device='cuda_if_available',
+                        verbose=True,
+                        time_offsets=10) 
+
+    cebra_behaviour_model = CEBRA(model_architecture=arch,
+                        batch_size=512,
+                        learning_rate=3e-4,
+                        temperature=1,
+                        output_dimension=d,
+                        max_iterations=max_iterations,
+                        distance=metric,
+                        conditional='time_delta',
+                        device='cuda_if_available',
+                        verbose=True,
+                        time_offsets=10)
+
+    # train them both
+    cebra_time_model.fit(neural_data)
+    cebra_behaviour_model.fit(neural_data, b_label)
+
+    # compute the embeddings
+    time_embedding = cebra_time_model.transform(neural_data)
+    behaviour_embedding = cebra_behaviour_model.transform(neural_data)
+
+    # return the embeddings 
+
+    return time_embedding, behaviour_embedding
+
+#--------------------------------------------------------------------
+
 # for each NM combination
 def nm_analysis(data, df_, t_times_, c_times_,arch_ ='offset10-model', metric_ ='cosine',labels='reward',other_label_=None, window_=None,dimension=3,missing_nm=""):
 
@@ -278,7 +233,7 @@ def nm_analysis(data, df_, t_times_, c_times_,arch_ ='offset10-model', metric_ =
     # format the data into 1s window around the choice and create the labels
     nms_HD, reward_labels, choice_labels, n_licks, rpe_labels = format_data(data, df_, t_times_,c_times_, window=window_)
 
-
+    
     # choose the labels and define label classes (p=rewarded/left n= unrewarded/right)
     if labels=='reward':
         positive, negative = define_label_classes(reward_labels)
@@ -308,50 +263,6 @@ def nm_analysis(data, df_, t_times_, c_times_,arch_ ='offset10-model', metric_ =
 
 #--------------------------------------------------------------------
 
-# first make function to make the plots given a list of embeddings
-def plot4_embeddings(embeddings, labels , l_class, titles=['DA only', 'NE only', '5HT only', 'ACh only'], t=""):
-
-    # number of plots
-    n_plots = len(embeddings)
-
-    n_columns = 2
-    n_rows = n_plots//n_columns
-
-    # create axis
-    fig = plt.figure(figsize=(8,4*n_plots))
-    gs = gridspec.GridSpec(n_rows, n_columns, figure=fig)
-
-    # colour 
-    c = ['cool','plasma','pink','winter']
-
-    for i, embed in enumerate(embeddings):
-
-        # create the axes
-        ax = fig.add_subplot(gs[i // n_columns, i%n_columns], projection='3d')
-
-        ax.set_xlabel("latent 1", labelpad=0.001, fontsize=13)
-        ax.set_ylabel("latent 2", labelpad=0.001, fontsize=13)
-        ax.set_zlabel("latent 3", labelpad=0.001, fontsize=13)
-
-        # Hide X and Y axes label marks
-        ax.xaxis.set_tick_params(labelbottom=False)
-        ax.yaxis.set_tick_params(labelleft=False)
-        ax.zaxis.set_tick_params(labelright=False)
-
-        # Hide X and Y axes tick marks
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.set_zticks([])
-
-        # plot the embedding
-        cebra.plot_embedding(embedding=embed[l_class[0],:], embedding_labels=labels[l_class[0]], ax=ax, markersize=2,title=titles[i], cmap=c[0])
-        cebra.plot_embedding(embedding=embed[l_class[1],:], embedding_labels=labels[l_class[1]], ax=ax, markersize=2,title=titles[i], cmap=c[1])
-
-    plt.suptitle(t, fontsize=15)
-    plt.tight_layout()
-
-#--------------------------------------------------------------------
-
 # run nm analysis on mutliple nm datasets 
 def nm_analysis_2(data, df, trace_times, choice_times, title,arch='offset10-model', metric ='cosine', label='reward', other_label = None, window=None):
 
@@ -377,121 +288,6 @@ def nm_analysis_2(data, df, trace_times, choice_times, title,arch='offset10-mode
 
     return behaviour_embeddings, time_embedings, t_labels, [positive,negative]
 #--------------------------------------------------------------------
-
-# function to make datasets of combinations of 3 NMs
-# format the arrays
-def create_datasets(traces_):
-
-    # create a list to hold the different combinations of NM data
-    datasets = []
-
-    # iterate through the keys in the dictionary holding the NM data
-    for key in traces_:
-
-        # at each iteration make an array of NM data and exclude the current NM from the array
-        array = np.array([traces_[trace] for trace in traces_.keys() if trace !=key ])
-
-        # format the array 
-        f_array = np.transpose(array)
-        f_array = f_array.astype(np.float64)
-        print("shape of formatted array:", f_array.shape)
-        datasets.append(f_array)
-
-
-    return datasets
-
-#--------------------------------------------------------------------
-
-# get the data as individual datasets of each nm
-def individual_datasets(traces_):
-
-    # create a list to hold the different NMs data
-    datasets = []
-
-    # loop through the traces
-    for trace in traces_.keys():
-
-        # select the trace of the current NM
-        array = np.array([traces_[trace]])
-
-        # format the array 
-        f_array = np.transpose(array)
-        f_array = f_array.astype(np.float64)
-        print("shape of formatted array:", f_array.shape)
-        datasets.append(f_array)
-
-    return datasets
-
-#--------------------------------------------------------------------
-
-# define function to get the auc scores
-def get_auc(set_of_embeddings,trial_labels, n_iterations=1):   
-
-     # list to store mean auc scores at each of these embedding dimensions
-    mean_scores = []
-    errors = []
-
-    for j, embedding in enumerate(set_of_embeddings):
-
-        # quantify with AUC score
-        scores = []
-
-        # for each NM make a couple of runs of the log regression model to get error bars
-        for i in range(n_iterations):
-
-            # make logistic function, fit it and use it to predict the initial labels from the embedding
-            logreg = LogisticRegression(random_state=42)
-            logreg.fit(embedding, trial_labels)
-            prediction = logreg.predict(embedding)
-
-            # quantify how well the embedding mirrors the labels using the auc score
-
-            # make a precision recall curve and get the threshold
-            precision, recall, threshold = precision_recall_curve(trial_labels, prediction)
-            threshold = np.concatenate([np.array([0]), threshold])
-
-            # calculate the fpr and tpr for all thresholds of the classification
-            fpr, tpr, threshold = roc_curve(trial_labels, prediction)
-
-            # get the auc score and append it to the list
-            roc_auc = auc(fpr, tpr)
-            scores.append(roc_auc)
-
-        # store the mean and the standard deviation 
-        mean_scores.append(np.mean(scores))
-        errors.append(np.std(scores))
-
-    return mean_scores, errors
-
-#--------------------------------------------------------------------
-
-# gets number of cpus available
-def get_code_ocean_cpu_limit():
-    """
-    Gets the Code Ocean capsule CPU limit
-
-    Returns
-    -------
-    int:
-        number of cores available for compute
-    """
-    # Checks for environmental variables
-    co_cpus = os.environ.get("CO_CPUS")
-    aws_batch_job_id = os.environ.get("AWS_BATCH_JOB_ID")
-
-    if co_cpus:
-        return co_cpus
-    if aws_batch_job_id:
-        return 1
-    with open("/sys/fs/cgroup/cpu/cpu.cfs_quota_us") as fp:
-        cfs_quota_us = int(fp.read())
-    with open("/sys/fs/cgroup/cpu/cpu.cfs_period_us") as fp:
-        cfs_period_us = int(fp.read())
-    container_cpus = cfs_quota_us // cfs_period_us
-    # For physical machine, the `cfs_quota_us` could be '-1'
-    return psutil.cpu_count(logical=False) if container_cpus < 1 else container_cpus
-
-#-----------------------------------------------------------------------------------------------------------------
 
 # Set up logging configuration
 logging.basicConfig(
@@ -631,6 +427,39 @@ def sess_analysis(df_trials_sess, label_='reward'):
 
 #------------------------------------------------------------------------------------------------------
 
+# Function to analyze a list of sessions
+def analyze_sessions(sessions, behaviour_label='reward'):
+
+    # Define the list of valid behaviour labels -- can add more later
+    valid_behaviour_labels = ['reward', 'choice', 'rpe']
+    
+    # Check if the provided behaviour_label is in the list of valid labels
+    if behaviour_label not in valid_behaviour_labels:
+        raise ValueError(f"Invalid behaviour_label: {behaviour_label}. Must be one of {valid_behaviour_labels}.")
+
+    # define dataframe
+    if behaviour_label == 'rpe':
+        session_stats_df = pd.DataFrame(columns=["subject_ID", "ses_idx", f"all4_R2_{behaviour_label}", f"DA_R2_{behaviour_label}", f"NE_R2_{behaviour_label}", f"5HT_R2_{behaviour_label}", f"ACh_R2_{behaviour_label}", f"b4_R2_{behaviour_label}", f"af_R2_{behaviour_label}"])
+    else:
+        session_stats_df = pd.DataFrame(columns=["subject_ID", "ses_idx", f"all4_AUC_{behaviour_label}", f"DA_AUC_{behaviour_label}", f"NE_AUC_{behaviour_label}", f"5HT_AUC_{behaviour_label}", f"ACh_AUC_{behaviour_label}", f"b4_AUC_{behaviour_label}", f"af_AUC_{behaviour_label}"])
+
+    # analyse the sessions
+    for i, session in enumerate(sessions):
+
+        session_df = pd.read_pickle(session)
+
+        # make sure there's only one session's data in the input df then get the session index
+        assert(np.unique(session_df['ses_idx'].values).shape[0]==1)
+
+        session_stats = sess_analysis(session_df, behaviour_label)
+
+        if session_stats:
+            session_stats_df.loc[len(session_stats_df)] = session_stats
+
+    return session_stats_df
+
+#------------------------------------------------------------------------------------------------------
+
 # get r2 score (x==embedding, y=target/label)
 def reconstruction_score(x, y):
 
@@ -668,43 +497,215 @@ def get_r2(set_of_embeddings, labels, n_iterations=1):
 
 #------------------------------------------------------------------------------------------------------
 
-# Function to analyze a list of sessions
-def analyze_sessions(sessions, behaviour_label='reward'):
+# define function to get the auc scores
+def get_auc(set_of_embeddings,trial_labels, n_iterations=1):   
 
-    # Define the list of valid behaviour labels -- can add more later
-    valid_behaviour_labels = ['reward', 'choice', 'rpe']
-    
-    # Check if the provided behaviour_label is in the list of valid labels
-    if behaviour_label not in valid_behaviour_labels:
-        raise ValueError(f"Invalid behaviour_label: {behaviour_label}. Must be one of {valid_behaviour_labels}.")
+     # list to store mean auc scores at each of these embedding dimensions
+    mean_scores = []
+    errors = []
 
-    # define dataframe
-    if behaviour_label == 'rpe':
-        session_stats_df = pd.DataFrame(columns=["subject_ID", "ses_idx", f"all4_R2_{behaviour_label}", f"DA_R2_{behaviour_label}", f"NE_R2_{behaviour_label}", f"5HT_R2_{behaviour_label}", f"ACh_R2_{behaviour_label}", f"b4_R2_{behaviour_label}", f"af_R2_{behaviour_label}"])
-    else:
-        session_stats_df = pd.DataFrame(columns=["subject_ID", "ses_idx", f"all4_AUC_{behaviour_label}", f"DA_AUC_{behaviour_label}", f"NE_AUC_{behaviour_label}", f"5HT_AUC_{behaviour_label}", f"ACh_AUC_{behaviour_label}", f"b4_AUC_{behaviour_label}", f"af_AUC_{behaviour_label}"])
+    for j, embedding in enumerate(set_of_embeddings):
 
-    # analyse the sessions
-    for i, session in enumerate(sessions):
+        # quantify with AUC score
+        scores = []
 
-        session_df = pd.read_pickle(session)
+        # for each NM make a couple of runs of the log regression model to get error bars
+        for i in range(n_iterations):
 
-        # make sure there's only one session's data in the input df then get the session index
-        assert(np.unique(session_df['ses_idx'].values).shape[0]==1)
+            # make logistic function, fit it and use it to predict the initial labels from the embedding
+            logreg = LogisticRegression(random_state=42)
+            logreg.fit(embedding, trial_labels)
+            prediction = logreg.predict(embedding)
 
-        session_stats = sess_analysis(session_df, behaviour_label)
+            # quantify how well the embedding mirrors the labels using the auc score
 
-        if session_stats:
-            session_stats_df.loc[len(session_stats_df)] = session_stats
+            # make a precision recall curve and get the threshold
+            precision, recall, threshold = precision_recall_curve(trial_labels, prediction)
+            threshold = np.concatenate([np.array([0]), threshold])
 
-    return session_stats_df
+            # calculate the fpr and tpr for all thresholds of the classification
+            fpr, tpr, threshold = roc_curve(trial_labels, prediction)
 
-#------------------------------------------------------------------------------------------------------
+            # get the auc score and append it to the list
+            roc_auc = auc(fpr, tpr)
+            scores.append(roc_auc)
 
+        # store the mean and the standard deviation 
+        mean_scores.append(np.mean(scores))
+        errors.append(np.std(scores))
+
+    return mean_scores, errors
+
+#--------------------------------------------------------------------
 # function to define results folder
 def define_resultsDir(folder='session_stats', save_dir = '../results'):
     results_folder = os.path.join(save_dir,folder)
     os.makedirs(results_folder, exist_ok=True)
     return results_folder
+
+#--------------------------------------------------------------------
+
+# gets number of cpus available
+def get_code_ocean_cpu_limit():
+    """
+    Gets the Code Ocean capsule CPU limit
+
+    Returns
+    -------
+    int:
+        number of cores available for compute
+    """
+    # Checks for environmental variables
+    co_cpus = os.environ.get("CO_CPUS")
+    aws_batch_job_id = os.environ.get("AWS_BATCH_JOB_ID")
+
+    if co_cpus:
+        return co_cpus
+    if aws_batch_job_id:
+        return 1
+    with open("/sys/fs/cgroup/cpu/cpu.cfs_quota_us") as fp:
+        cfs_quota_us = int(fp.read())
+    with open("/sys/fs/cgroup/cpu/cpu.cfs_period_us") as fp:
+        cfs_period_us = int(fp.read())
+    container_cpus = cfs_quota_us // cfs_period_us
+    # For physical machine, the `cfs_quota_us` could be '-1'
+    return psutil.cpu_count(logical=False) if container_cpus < 1 else container_cpus
+
+#-----------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------
-# %%
+
+# function to view the ideal embedding from different angles
+def view_embedding(embed1, embed2, label, label_class, titles=['time embedding','behaviour_embedding'], main_title="Different Angles", s=0.8, n_angles=2):
+
+    fig1=plt.figure(figsize=(8,4*n_angles))
+    gs = gridspec.GridSpec(n_angles, 2, figure=fig1)
+
+    c = ['cool','plasma','pink','winter']
+
+    for i, ii in enumerate(range(60,360,int(300/n_angles))):
+
+        # create the axes
+        ax1 = fig1.add_subplot(gs[1*i,0], projection='3d')
+        ax1.view_init(elev=10., azim=ii) 
+
+        ax2 = fig1.add_subplot(gs[1*i,1], projection='3d')
+        ax2.view_init(elev=10., azim=ii)
+
+        # loop over the number of labels
+        for j,value in enumerate(label_class):
+            
+            # plot time embedding
+            cebra.plot_embedding(embedding=embed1[value,:], embedding_labels=label[value], ax=ax1, markersize=s,title=titles[0],cmap=c[j])
+
+            # plot behaviour embedding
+            cebra.plot_embedding(embedding=embed2[value,:], embedding_labels=label[value], ax=ax2, markersize=s,title=titles[1],cmap=c[j])
+
+            plt.tight_layout()
+
+        plt.suptitle(main_title)
+
+#-------------------------------------------------------------------
+
+# define a function to view the embeddings
+def view(time_embedding, behaviour_embedding, labels, label_classes, scores=None, titles=["Time embedding", "Behaviour embedding"],main_title="Reward Label Embeddings", size=5):
+ 
+    # create a figure and make the plots
+    fig = plt.figure(figsize=(17,8))
+    gs = gridspec.GridSpec(1, 2, figure=fig)
+
+
+    ax81 = fig.add_subplot(gs[0,0], projection='3d')
+    ax82 = fig.add_subplot(gs[0,1], projection='3d')
+    
+    for ax in [ax81,ax82]:
+        ax.set_xlabel("latent 1", labelpad=0.001, fontsize=13)
+        ax.set_ylabel("latent 2", labelpad=0.001, fontsize=13)
+        ax.set_zlabel("latent 3", labelpad=0.001, fontsize=13)
+
+        # Hide X and Y axes label marks
+        ax.xaxis.set_tick_params(labelbottom=False)
+        ax.yaxis.set_tick_params(labelleft=False)
+        ax.zaxis.set_tick_params(labelright=False)
+
+        # Hide X and Y axes tick marks
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_zticks([])
+
+
+    # colour maps
+    colours = ['cool', 'plasma', 'spring']
+
+    embeddings = [time_embedding, behaviour_embedding]
+
+    if scores == None:
+        scores, errors = np.round(get_auc(embeddings, labels),3)
+
+        # plot the time embedding 
+        cebra.plot_embedding(embedding=time_embedding[label_classes[0],:], embedding_labels=labels[label_classes[0]],ax=ax81, markersize=size, title=titles[0], cmap=colours[0])
+        cebra.plot_embedding(embedding=time_embedding[label_classes[1],:], embedding_labels=labels[label_classes[1]],ax=ax81, markersize=size, title= f'{titles[0]}, Score:{scores[0]}', cmap=colours[1])
+
+
+        # plot the behaviour embedding 
+        cebra.plot_embedding(embedding=behaviour_embedding[label_classes[0],:], embedding_labels=labels[label_classes[0]],ax=ax82, markersize=size, title=titles[1], cmap=colours[0],)
+        cebra.plot_embedding(embedding=behaviour_embedding[label_classes[1],:], embedding_labels=labels[label_classes[1]],ax=ax82,markersize=size, title= f'{titles[1]}, Score: {scores[1]}',  cmap=colours[1])
+    
+    elif scores == 'r2':
+        scores, errors = np.round(get_r2(embeddings, labels),3)
+
+        # plot the time embedding 
+        cebra.plot_embedding(embedding=time_embedding, embedding_labels=labels,ax=ax81, markersize=5, title= f'{titles[0]}, Score:{scores[0]}', cmap=colours[1])
+
+        # plot the behaviour embedding 
+        cebra.plot_embedding(embedding=behaviour_embedding, embedding_labels=labels,ax=ax82,markersize=5, title= f'{titles[1]}, Score: {scores[1]}',  cmap=colours[1])
+
+
+
+    plt.suptitle(main_title)
+    gs.tight_layout(figure=fig)
+
+#--------------------------------------------------------------------
+
+# first make function to make the plots given a list of embeddings
+def plot4_embeddings(embeddings, labels , l_class, titles=['DA only', 'NE only', '5HT only', 'ACh only'], t=""):
+
+    # number of plots
+    n_plots = len(embeddings)
+
+    n_columns = 2
+    n_rows = n_plots//n_columns
+
+    # create axis
+    fig = plt.figure(figsize=(8,4*n_plots))
+    gs = gridspec.GridSpec(n_rows, n_columns, figure=fig)
+
+    # colour 
+    c = ['cool','plasma','pink','winter']
+
+    for i, embed in enumerate(embeddings):
+
+        # create the axes
+        ax = fig.add_subplot(gs[i // n_columns, i%n_columns], projection='3d')
+
+        ax.set_xlabel("latent 1", labelpad=0.001, fontsize=13)
+        ax.set_ylabel("latent 2", labelpad=0.001, fontsize=13)
+        ax.set_zlabel("latent 3", labelpad=0.001, fontsize=13)
+
+        # Hide X and Y axes label marks
+        ax.xaxis.set_tick_params(labelbottom=False)
+        ax.yaxis.set_tick_params(labelleft=False)
+        ax.zaxis.set_tick_params(labelright=False)
+
+        # Hide X and Y axes tick marks
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_zticks([])
+
+        # plot the embedding
+        cebra.plot_embedding(embedding=embed[l_class[0],:], embedding_labels=labels[l_class[0]], ax=ax, markersize=2,title=titles[i], cmap=c[0])
+        cebra.plot_embedding(embedding=embed[l_class[1],:], embedding_labels=labels[l_class[1]], ax=ax, markersize=2,title=titles[i], cmap=c[1])
+
+    plt.suptitle(t, fontsize=15)
+    plt.tight_layout()
+
+#--------------------------------------------------------------------

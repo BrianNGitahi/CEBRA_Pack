@@ -14,4 +14,4 @@ AIND-Data is an example of how to use CEBRA in analysis (specifically with the f
 
 NB: If you're using these notebooks locally you'll need to download the data folder to be able to run all the analyses. An easy option would be to directly access the Code Ocean Capsule and the access VS Code or another IDE to run the notebooks without donwloading the data.
 
-Contact: bgitahi@alumni.princeton.edu
+Contact: bgitahi[at]alumni.princeton.edu
